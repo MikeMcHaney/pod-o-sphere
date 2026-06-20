@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/services/">
+    <Project Path="services/api/PodOSphere.Api.csproj" />
+    <Project Path="services/worker/PodOSphere.Worker.csproj" />
+  </Folder>
+</Solution>
+

@@ -1,0 +1,19 @@
+:root { --primary: #2563eb; --secondary: #7c3aed; --accent: #f97316; --background: #fffdf8; --text: #172033; font-family: Georgia, ui-serif, serif; color: var(--text); background: var(--background); }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { min-height: 100vh; }
+header { display: flex; align-items: center; gap: 1rem; max-width: 1100px; margin: auto; padding: 2rem; }
+.mark { display: grid; place-items: center; width: 3rem; height: 3rem; border-radius: 50%; background: var(--secondary); color: white; font-family: ui-sans-serif, system-ui; font-weight: 900; }
+header p { margin: 0 0 .25rem; color: #64748b; font: .75rem ui-sans-serif, system-ui; text-transform: uppercase; letter-spacing: .12em; }
+header h1 { margin: 0; font-size: 1.25rem; }
+.hero { padding: 7rem 2rem; text-align: center; color: white; background: linear-gradient(120deg, var(--primary), var(--secondary)); }
+.eyebrow { font: 700 .8rem ui-sans-serif, system-ui; letter-spacing: .15em; text-transform: uppercase; }
+h2 { max-width: 800px; margin: .5rem auto 2rem; font-size: clamp(2.8rem, 6vw, 5rem); letter-spacing: -.04em; }
+form { display: flex; max-width: 700px; margin: auto; padding: .4rem; border-radius: .8rem; background: white; }
+input { flex: 1; min-width: 0; padding: 1rem; border: 0; font-size: 1rem; }
+button { border: 0; border-radius: .55rem; padding: 0 1.5rem; background: var(--accent); color: #172033; font-weight: 800; }
+.content { display: grid; grid-template-columns: 2fr 1fr; gap: 3rem; max-width: 1100px; margin: auto; padding: 4rem 2rem; }
+.topics { display: flex; flex-wrap: wrap; gap: .7rem; }.topics a { padding: .7rem 1rem; border: 1px solid #cbd5e1; border-radius: 999px; color: var(--primary); text-decoration: none; }
+aside { padding: 1.5rem; border-radius: 1rem; background: #f1f5f9; } aside p { color: #64748b; line-height: 1.6; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+@media (max-width: 700px) { .hero { padding: 5rem 1rem; } form { flex-direction: column; gap: .4rem; } button { padding: 1rem; } .content { grid-template-columns: 1fr; } }

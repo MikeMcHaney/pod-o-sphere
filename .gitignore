@@ -1,0 +1,12 @@
+node_modules/
+.next/
+out/
+bin/
+obj/
+.env
+.env.local
+.DS_Store
+*.user
+*.suo
+coverage/
+
