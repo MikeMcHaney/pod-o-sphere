@@ -3,5 +3,8 @@
     <Project Path="services/api/PodOSphere.Api.csproj" />
     <Project Path="services/worker/PodOSphere.Worker.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PodOSphere.Api.Tests/PodOSphere.Api.Tests.csproj" />
+  </Folder>
 </Solution>
 

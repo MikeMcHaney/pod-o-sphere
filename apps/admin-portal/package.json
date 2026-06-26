@@ -9,6 +9,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@azure/msal-browser": "^5.14.0",
+    "@azure/msal-react": "^5.4.5",
     "next": "^16.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
@@ -20,4 +22,3 @@
     "typescript": "^5.9.0"
   }
 }
-

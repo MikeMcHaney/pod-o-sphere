@@ -1,7 +1,12 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>PodOSphere.Api</RootNamespace>
+    <UserSecretsId>526c06fb-48ef-4bf1-b0fb-1c0128cbaa18</UserSecretsId>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.9" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.9" />
+    <PackageReference Include="Npgsql" Version="10.0.3" />
+  </ItemGroup>
 </Project>
-

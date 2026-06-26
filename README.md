@@ -50,11 +50,13 @@ dotnet run --project services/api
 dotnet run --project services/worker
 ```
 
-The API liveness endpoint is `http://localhost:5000/health`. `GET /api/status` reports whether dependency settings are present without returning secrets. In Development only, sending `X-Development-User` creates a placeholder principal; this is not authorization and will be replaced by Entra ID in Phase 1.
+The API exposes liveness at `http://localhost:5000/health` and dependency readiness at `http://localhost:5000/health/ready`. `GET /api/status` reports live MSSQL and Supabase/Postgres status without returning connection details. `GET /api/me` requires a Microsoft Entra External ID access token issued for the API registration.
+
+Copy `apps/admin-portal/.env.example` to `apps/admin-portal/.env.local` and fill in the admin portal application ID, tenant subdomain, directory tenant ID, and exposed API scope. API identity settings are stored locally with .NET User Secrets under the `EntraExternalId` section; no client secret is required for the browser-to-API delegated flow.
 
 ## Databases
 
-Start MSSQL, then apply [`mssql/001_core_metadata_schema.sql`](./mssql/001_core_metadata_schema.sql) with your preferred SQL client:
+Start MSSQL, then apply the numbered scripts under [`mssql`](./mssql) in order with your preferred SQL client. `001_core_metadata_schema.sql` is the mission-packet baseline; later scripts are forward migrations.
 
 ```bash
 docker compose up -d mssql
@@ -67,7 +69,7 @@ supabase start
 supabase db reset
 ```
 
-The SQL files are source-controlled references copied unchanged from the mission packet. Application migrations and ORM mappings should remain consistent with these authorities.
+The `001` MSSQL schema and initial Supabase migration are mission-packet baselines copied unchanged. Later numbered scripts are Pod-o-Sphere forward migrations; application mappings must reflect the full ordered result.
 
 ## Checks
 
@@ -75,6 +77,7 @@ The SQL files are source-controlled references copied unchanged from the mission
 npm run typecheck
 npm run build
 dotnet build PodOSphere.slnx
+dotnet test PodOSphere.slnx
 ```
 
 Phase 0 deliberately excludes real authentication, database access, onboarding endpoints, and search behavior. Those features begin in the later phases documented under [`pod-o-sphere-mission/docs`](./pod-o-sphere-mission/docs).

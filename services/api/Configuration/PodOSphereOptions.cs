@@ -9,5 +9,6 @@ public sealed class PodOSphereOptions
     public string SupabaseUrl { get; init; } = string.Empty;
 
     public string SupabaseServiceRoleKey { get; init; } = string.Empty;
-}
 
+    public string SupabasePostgresConnectionString { get; init; } = string.Empty;
+}
