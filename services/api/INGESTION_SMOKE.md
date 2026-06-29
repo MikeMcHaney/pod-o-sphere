@@ -9,6 +9,15 @@ export API_URL="http://localhost:5000"
 export PODOSPHERE_INTERNAL_TOKEN="<local-ingestion-token>"
 ```
 
+Confirm the API can see the local Supabase Postgres connection string before claiming a job:
+
+```bash
+dotnet user-secrets list --project services/api
+curl -sS "$API_URL/api/status"
+```
+
+`/api/status` should show `supabase-postgres` as healthy. If it is unhealthy, set `PodOSphere:SupabasePostgresConnectionString`, restart the API, and check again.
+
 Claim the next YouTube inventory job:
 
 ```bash
@@ -41,7 +50,7 @@ curl -sS -X POST "$API_URL/internal/jobs/$JOB_ID/heartbeat" \
 Upsert demo video metadata. Demo sources are capped by `DataSources.MaxEpisodes`, so extra videos are skipped server-side.
 
 ```bash
-curl -sS -X POST "$API_URL/internal/sources/youtube/videos/upsert" \
+curl --fail-with-body -sS -X POST "$API_URL/internal/sources/youtube/videos/upsert" \
   -H "Content-Type: application/json" \
   -H "X-PodOSphere-Internal-Token: $PODOSPHERE_INTERNAL_TOKEN" \
   -d "{
@@ -73,8 +82,10 @@ curl -sS -X POST "$API_URL/internal/sources/youtube/videos/upsert" \
 
 Complete the claimed inventory job:
 
+Only complete the job after the video upsert returns `200 OK` with inserted/updated counts. If upsert returns an error, do not complete the job; fail it as retryable or fix the configuration and create/claim another inventory job.
+
 ```bash
-curl -sS -X POST "$API_URL/internal/jobs/$JOB_ID/complete" \
+curl --fail-with-body -sS -X POST "$API_URL/internal/jobs/$JOB_ID/complete" \
   -H "Content-Type: application/json" \
   -H "X-PodOSphere-Internal-Token: $PODOSPHERE_INTERNAL_TOKEN" \
   -d '{
@@ -88,7 +99,7 @@ curl -sS -X POST "$API_URL/internal/jobs/$JOB_ID/complete" \
 If the worker path fails, mark the job failed:
 
 ```bash
-curl -sS -X POST "$API_URL/internal/jobs/$JOB_ID/fail" \
+curl --fail-with-body -sS -X POST "$API_URL/internal/jobs/$JOB_ID/fail" \
   -H "Content-Type: application/json" \
   -H "X-PodOSphere-Internal-Token: $PODOSPHERE_INTERNAL_TOKEN" \
   -d '{

@@ -95,6 +95,7 @@ supabase start
 
 Apply database scripts/migrations as described in the root README.
 
+For the current ingestion process map, use [`INGESTION_WORKFLOW.md`](./INGESTION_WORKFLOW.md).
 For an end-to-end ingestion loop without n8n, use [`INGESTION_SMOKE.md`](./INGESTION_SMOKE.md).
 
 ## Checks
