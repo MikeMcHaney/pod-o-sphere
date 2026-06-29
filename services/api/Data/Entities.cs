@@ -134,6 +134,8 @@ public sealed class DataSource
     public required string SourceUrl { get; set; }
     public string? ExternalSourceId { get; set; }
     public string Status { get; set; } = "Pending";
+    public string InventoryMode { get; set; } = "Full";
+    public int? MaxEpisodes { get; set; }
     public DateTime? LastInventoryAtUtc { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? UpdatedAtUtc { get; set; }
@@ -151,10 +153,12 @@ public sealed class ProcessingJob
     public string Status { get; set; } = "Pending";
     public int Priority { get; set; } = 50;
     public string? PayloadJson { get; set; }
+    public string? ResultJson { get; set; }
     public int AttemptCount { get; set; }
     public int MaxAttempts { get; set; } = 3;
     public string? ClaimedBy { get; set; }
     public DateTime? ClaimedAtUtc { get; set; }
+    public DateTime? LeaseExpiresAtUtc { get; set; }
     public DateTime? LastHeartbeatAtUtc { get; set; }
     public DateTime? StartedAtUtc { get; set; }
     public DateTime? CompletedAtUtc { get; set; }

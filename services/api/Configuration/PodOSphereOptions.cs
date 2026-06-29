@@ -11,4 +11,6 @@ public sealed class PodOSphereOptions
     public string SupabaseServiceRoleKey { get; init; } = string.Empty;
 
     public string SupabasePostgresConnectionString { get; init; } = string.Empty;
+
+    public string InternalIngestionToken { get; init; } = string.Empty;
 }

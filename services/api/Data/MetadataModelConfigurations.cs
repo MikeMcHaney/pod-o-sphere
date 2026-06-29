@@ -180,7 +180,9 @@ public sealed class DataSourceConfiguration : IEntityTypeConfiguration<DataSourc
         builder.Property(x => x.SourceUrl).HasMaxLength(1000).IsRequired();
         builder.Property(x => x.ExternalSourceId).HasMaxLength(200);
         builder.Property(x => x.Status).HasMaxLength(50).HasDefaultValue("Pending").IsRequired();
+        builder.Property(x => x.InventoryMode).HasMaxLength(50).HasDefaultValue("Full").IsRequired();
         builder.Property(x => x.CreatedAtUtc).HasDefaultValueSql("sysutcdatetime()");
+        builder.HasIndex(x => new { x.ShowId, x.SourceType, x.SourceUrl }).IsUnique().HasDatabaseName("UQ_DataSources_Show_Type_Url");
         builder.HasOne(x => x.Show).WithMany(x => x.DataSources).HasForeignKey(x => x.ShowId).OnDelete(DeleteBehavior.NoAction);
     }
 }
@@ -196,6 +198,7 @@ public sealed class ProcessingJobConfiguration : IEntityTypeConfiguration<Proces
         builder.Property(x => x.Status).HasMaxLength(50).HasDefaultValue("Pending").IsRequired();
         builder.Property(x => x.Priority).HasDefaultValue(50);
         builder.Property(x => x.PayloadJson).HasColumnType("nvarchar(max)");
+        builder.Property(x => x.ResultJson).HasColumnType("nvarchar(max)");
         builder.Property(x => x.AttemptCount).HasDefaultValue(0);
         builder.Property(x => x.MaxAttempts).HasDefaultValue(3);
         builder.Property(x => x.ClaimedBy).HasMaxLength(200);
@@ -203,6 +206,7 @@ public sealed class ProcessingJobConfiguration : IEntityTypeConfiguration<Proces
         builder.Property(x => x.ErrorMessage).HasColumnType("nvarchar(max)");
         builder.Property(x => x.CreatedAtUtc).HasDefaultValueSql("sysutcdatetime()");
         builder.HasIndex(x => new { x.Status, x.Priority, x.CreatedAtUtc }).HasDatabaseName("IX_ProcessingJobs_Status_Priority").IsDescending(false, true, false);
+        builder.HasIndex(x => new { x.Status, x.LeaseExpiresAtUtc }).HasDatabaseName("IX_ProcessingJobs_LeaseExpiry").HasFilter("[Status] = 'InProgress'");
         builder.HasIndex(x => x.ShowId).HasDatabaseName("IX_ProcessingJobs_ShowId");
         builder.HasOne(x => x.Tenant).WithMany(x => x.ProcessingJobs).HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.NoAction);
         builder.HasOne(x => x.Show).WithMany(x => x.ProcessingJobs).HasForeignKey(x => x.ShowId).OnDelete(DeleteBehavior.NoAction);

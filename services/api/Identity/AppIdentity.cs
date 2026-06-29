@@ -50,6 +50,14 @@ public sealed record AdminTenantResponse(
     string Status,
     int ActiveUserCount);
 
+public sealed record AdminShowResponse(
+    Guid ShowId,
+    Guid TenantId,
+    string TenantName,
+    string ShowName,
+    string Slug,
+    string Status);
+
 public sealed class SuperAdminRequirement : IAuthorizationRequirement;
 
 public sealed class SuperAdminAuthorizationHandler(AppIdentityService identityService)

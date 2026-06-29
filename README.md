@@ -56,7 +56,7 @@ Copy `apps/admin-portal/.env.example` to `apps/admin-portal/.env.local` and fill
 
 ## Databases
 
-Start MSSQL, then apply the numbered scripts under [`mssql`](./mssql) in order with your preferred SQL client. `001_core_metadata_schema.sql` is the mission-packet baseline; later scripts are forward migrations. `003_platform_roles_invitations_show_claims.sql` moves SuperAdmin into platform roles and adds the invite/show-claim onboarding tables. `004_app_user_contact_profile.sql` separates contact email from token username hints. `005_audit_events.sql` adds the audit trail foundation.
+Start MSSQL, then apply the numbered scripts under [`mssql`](./mssql) in order with your preferred SQL client. `001_core_metadata_schema.sql` is the mission-packet baseline; later scripts are forward migrations. `003_platform_roles_invitations_show_claims.sql` moves SuperAdmin into platform roles and adds the invite/show-claim onboarding tables. `004_app_user_contact_profile.sql` separates contact email from token username hints. `005_audit_events.sql` adds the audit trail foundation. `006_processing_job_results.sql` adds job result metadata for ingestion workers. `007_data_source_inventory_limits.sql` adds demo-mode inventory limits for data sources. `008_ingestion_hardening.sql` adds job leases and duplicate source protection.
 
 ```bash
 docker compose up -d mssql

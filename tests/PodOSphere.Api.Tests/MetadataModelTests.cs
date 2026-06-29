@@ -55,11 +55,22 @@ public sealed class MetadataModelTests
         var priorityIndex = processingJob.GetIndexes()
             .Single(index => index.GetDatabaseName() == "IX_ProcessingJobs_Status_Priority");
         Assert.Equal([false, true, false], priorityIndex.IsDescending);
+        Assert.Equal("nvarchar(max)", processingJob.FindProperty(nameof(ProcessingJob.ResultJson))!.GetColumnType());
+        Assert.Contains(
+            processingJob.GetIndexes(),
+            index => index.GetDatabaseName() == "IX_ProcessingJobs_LeaseExpiry" && index.GetFilter() == "[Status] = 'InProgress'");
 
         var usageCounter = model.FindEntityType(typeof(UsageCounter))!;
         Assert.Contains(
             usageCounter.GetIndexes(),
             index => index.IsUnique && index.GetDatabaseName() == "UQ_UsageCounters_Tenant_Show_Month");
+
+        var dataSource = model.FindEntityType(typeof(DataSource))!;
+        Assert.Equal("Full", dataSource.FindProperty(nameof(DataSource.InventoryMode))!.GetDefaultValue());
+        Assert.Equal(50, dataSource.FindProperty(nameof(DataSource.InventoryMode))!.GetMaxLength());
+        Assert.Contains(
+            dataSource.GetIndexes(),
+            index => index.IsUnique && index.GetDatabaseName() == "UQ_DataSources_Show_Type_Url");
 
         var appUser = model.FindEntityType(typeof(AppUser))!;
         var identityIndex = Assert.Single(

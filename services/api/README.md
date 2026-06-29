@@ -23,6 +23,7 @@ Useful endpoints:
 - `GET http://localhost:5000/api/status`: MSSQL and Supabase status summary.
 - `GET http://localhost:5000/api/me`: resolves the authenticated Entra External ID token to a seeded Pod-o-Sphere `AppUser` and returns roles/memberships.
 - `GET http://localhost:5000/api/admin/tenants`: SuperAdmin-only tenant list.
+- `GET http://localhost:5000/api/admin/shows`: SuperAdmin-only show list for onboarding tools.
 - `POST http://localhost:5000/api/admin/tenants/{tenantId}/invitations`: SuperAdmin-only invite creation. Returns the raw one-time token until email delivery is added.
 - `POST http://localhost:5000/api/invitations/accept`: authenticated invite acceptance by token. The signed-in user's contact email must match the invitation email.
 - `POST http://localhost:5000/api/admin/invitations/{invitationId}/revoke`: SuperAdmin-only pending invite revocation.
@@ -30,12 +31,22 @@ Useful endpoints:
 - `GET http://localhost:5000/api/admin/show-claims/pending`: SuperAdmin-only pending show-claim queue.
 - `POST http://localhost:5000/api/admin/show-claims/{showClaimId}/approve`: SuperAdmin-only show-claim approval.
 - `POST http://localhost:5000/api/admin/show-claims/{showClaimId}/reject`: SuperAdmin-only show-claim rejection.
+- `POST http://localhost:5000/api/admin/shows/{showId}/youtube-source`: SuperAdmin-only YouTube source creation and inventory job enqueue.
+- `POST http://localhost:5000/api/admin/youtube-demo`: SuperAdmin-only create show, create YouTube source, and enqueue demo inventory.
+- `POST http://localhost:5000/internal/jobs/claim`: internal ingestion worker job claim.
+- `POST http://localhost:5000/internal/jobs/{jobId}/heartbeat`: internal ingestion worker heartbeat.
+- `POST http://localhost:5000/internal/jobs/{jobId}/complete`: internal ingestion worker completion with summary/metrics.
+- `POST http://localhost:5000/internal/jobs/{jobId}/fail`: internal ingestion worker failure with retry intent.
+- `POST http://localhost:5000/internal/sources/youtube/videos/upsert`: internal ingestion worker discovered-video upsert into Supabase content tables.
 
 `SuperAdmin` is a platform role stored through `PlatformUserRoles`; tenant roles such as `TenantOwner` and `TenantAdmin` stay in `TenantUsers`.
 `AppUsers.ContactEmail` is the application contact address; `PreferredUsername` is only an identity-provider hint.
 SuperAdmin tenant-list access writes an `AuditEvents` record; invite and show-claim mutations use the same audit writer.
 Invitation tokens are stored as hashes only; returned create-response tokens are for local/manual delivery until outbound email exists.
 Show-claim review records approval or rejection only; tenant/show ownership transfer is intentionally deferred until the claim policy is designed.
+Internal ingestion endpoints require the `X-PodOSphere-Internal-Token` header.
+Use `inventoryMode: "Demo"` with `maxEpisodes: 5` for bounded YouTube demos.
+Job and source statuses are centralized in API constants; job claims renew a 30-minute lease on heartbeat and stale leases are returned to `Pending` on the next claim attempt.
 
 ## Local Config
 
@@ -54,6 +65,7 @@ dotnet user-secrets set --project services/api "PodOSphere:MssqlConnectionString
 dotnet user-secrets set --project services/api "PodOSphere:SupabaseUrl" "http://localhost:54321"
 dotnet user-secrets set --project services/api "PodOSphere:SupabasePostgresConnectionString" "Host=localhost;Port=54322;Database=postgres;Username=postgres;Password=postgres"
 dotnet user-secrets set --project services/api "PodOSphere:SupabaseServiceRoleKey" "<local-or-project-service-role-key>"
+dotnet user-secrets set --project services/api "PodOSphere:InternalIngestionToken" "<local-long-random-token>"
 ```
 
 Entra External ID settings:
@@ -82,6 +94,8 @@ supabase start
 ```
 
 Apply database scripts/migrations as described in the root README.
+
+For an end-to-end ingestion loop without n8n, use [`INGESTION_SMOKE.md`](./INGESTION_SMOKE.md).
 
 ## Checks
 

@@ -11,6 +11,7 @@ using PodOSphere.Api.Configuration;
 using PodOSphere.Api.Data;
 using PodOSphere.Api.Health;
 using PodOSphere.Api.Identity;
+using PodOSphere.Api.Ingestion;
 using PodOSphere.Api.Invitations;
 using PodOSphere.Api.ShowClaims;
 
@@ -48,6 +49,7 @@ builder.Services
 builder.Services.AddScoped<AppIdentityService>();
 builder.Services.AddScoped<AuditWriter>();
 builder.Services.AddScoped<InvitationService>();
+builder.Services.AddScoped<ProcessingJobService>();
 builder.Services.AddScoped<ShowClaimService>();
 builder.Services.AddScoped<IAuthorizationHandler, SuperAdminAuthorizationHandler>();
 builder.Services.AddAuthorization(options =>
@@ -146,6 +148,27 @@ app.MapGet("/api/admin/tenants", async (
     return Results.Ok(tenants);
 }).RequireAuthorization(AppPolicies.RequireSuperAdmin);
 
+app.MapGet("/api/admin/shows", async (
+    IDbContextFactory<MetadataDbContext> dbContextFactory,
+    CancellationToken cancellationToken) =>
+{
+    await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+    var shows = await dbContext.Shows
+        .AsNoTracking()
+        .OrderBy(show => show.Tenant.TenantName)
+        .ThenBy(show => show.ShowName)
+        .Select(show => new AdminShowResponse(
+            show.ShowId,
+            show.TenantId,
+            show.Tenant.TenantName,
+            show.ShowName,
+            show.Slug,
+            show.Status))
+        .ToArrayAsync(cancellationToken);
+
+    return Results.Ok(shows);
+}).RequireAuthorization(AppPolicies.RequireSuperAdmin);
+
 app.MapPost("/api/admin/tenants/{tenantId:guid}/invitations", async (
     Guid tenantId,
     CreateInvitationRequest request,
@@ -202,6 +225,78 @@ app.MapPost("/api/admin/show-claims/{showClaimId:guid}/reject", async (
     CancellationToken cancellationToken) =>
     await showClaimService.RejectAsync(user, showClaimId, request, cancellationToken))
     .RequireAuthorization(AppPolicies.RequireSuperAdmin);
+
+app.MapPost("/api/admin/shows/{showId:guid}/youtube-source", async (
+    Guid showId,
+    CreateYouTubeSourceRequest request,
+    ProcessingJobService processingJobService,
+    CancellationToken cancellationToken) =>
+    await processingJobService.CreateYouTubeSourceAsync(showId, request, cancellationToken))
+    .RequireAuthorization(AppPolicies.RequireSuperAdmin);
+
+app.MapPost("/api/admin/youtube-demo", async (
+    CreateYouTubeDemoRequest request,
+    ProcessingJobService processingJobService,
+    CancellationToken cancellationToken) =>
+    await processingJobService.CreateYouTubeDemoAsync(request, cancellationToken))
+    .RequireAuthorization(AppPolicies.RequireSuperAdmin);
+
+app.MapPost("/internal/jobs/claim", async (
+    ClaimJobRequest request,
+    HttpRequest httpRequest,
+    IOptions<PodOSphereOptions> options,
+    ProcessingJobService processingJobService,
+    CancellationToken cancellationToken) =>
+{
+    var authResult = InternalIngestionAuth.Validate(httpRequest, options);
+    return authResult ?? await processingJobService.ClaimAsync(request, cancellationToken);
+});
+
+app.MapPost("/internal/jobs/{jobId:guid}/heartbeat", async (
+    Guid jobId,
+    HttpRequest httpRequest,
+    IOptions<PodOSphereOptions> options,
+    ProcessingJobService processingJobService,
+    CancellationToken cancellationToken) =>
+{
+    var authResult = InternalIngestionAuth.Validate(httpRequest, options);
+    return authResult ?? await processingJobService.HeartbeatAsync(jobId, cancellationToken);
+});
+
+app.MapPost("/internal/jobs/{jobId:guid}/complete", async (
+    Guid jobId,
+    CompleteJobRequest request,
+    HttpRequest httpRequest,
+    IOptions<PodOSphereOptions> options,
+    ProcessingJobService processingJobService,
+    CancellationToken cancellationToken) =>
+{
+    var authResult = InternalIngestionAuth.Validate(httpRequest, options);
+    return authResult ?? await processingJobService.CompleteAsync(jobId, request, cancellationToken);
+});
+
+app.MapPost("/internal/jobs/{jobId:guid}/fail", async (
+    Guid jobId,
+    FailJobRequest request,
+    HttpRequest httpRequest,
+    IOptions<PodOSphereOptions> options,
+    ProcessingJobService processingJobService,
+    CancellationToken cancellationToken) =>
+{
+    var authResult = InternalIngestionAuth.Validate(httpRequest, options);
+    return authResult ?? await processingJobService.FailAsync(jobId, request, cancellationToken);
+});
+
+app.MapPost("/internal/sources/youtube/videos/upsert", async (
+    YouTubeVideoUpsertRequest request,
+    HttpRequest httpRequest,
+    IOptions<PodOSphereOptions> options,
+    ProcessingJobService processingJobService,
+    CancellationToken cancellationToken) =>
+{
+    var authResult = InternalIngestionAuth.Validate(httpRequest, options);
+    return authResult ?? await processingJobService.UpsertYouTubeVideosAsync(request, cancellationToken);
+});
 
 app.Run();
 

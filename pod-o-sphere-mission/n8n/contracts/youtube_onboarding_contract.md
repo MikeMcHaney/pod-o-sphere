@@ -29,10 +29,15 @@ Response:
   "jobType": "YouTubeChannelInventory",
   "payload": {
     "youtubeChannelUrl": "https://www.youtube.com/@example",
-    "mode": "BacklogAndLatest"
+    "mode": "DemoLatest",
+    "maxEpisodes": 5
   }
 }
 ```
+
+`mode` may be `DemoLatest` or `BacklogAndLatest`. For demo sources, `maxEpisodes`
+is included in the job payload and the API also enforces the source limit during
+video upsert.
 
 ## Write discovered videos
 
@@ -66,9 +71,12 @@ Response:
   "inserted": 10,
   "updated": 2,
   "skipped": 0,
-  "transcriptJobsCreated": 12
+  "transcriptJobsCreated": 10
 }
 ```
+
+Transcript jobs are created in MSSQL as `YouTubeTranscriptIngestion` processing jobs
+for newly inserted videos only.
 
 ## Complete job
 
@@ -99,4 +107,3 @@ Request:
   "retryable": false
 }
 ```
-

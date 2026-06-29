@@ -2,10 +2,10 @@
 
 import { InteractionRequiredAuthError } from "@azure/msal-browser";
 import { useIsAuthenticated, useMsal } from "@azure/msal-react";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { apiScope, apiUrl, authConfigurationError } from "./auth-config";
 
-const navItems = ["Overview", "Tenants", "Invitations", "Show claims"];
+const navItems = ["Overview", "Tenants", "Sources", "Invitations", "Show claims"];
 
 type CurrentUser = {
   appUserId: string;
@@ -36,6 +36,15 @@ type AdminTenant = {
   activeUserCount: number;
 };
 
+type AdminShow = {
+  showId: string;
+  tenantId: string;
+  tenantName: string;
+  showName: string;
+  slug: string;
+  status: string;
+};
+
 type ShowClaim = {
   showClaimId: string;
   showId: string | null;
@@ -57,6 +66,18 @@ type InvitationResponse = {
   token: string;
 };
 
+type YouTubeSourceResponse = {
+  tenantId: string;
+  showId: string;
+  showName: string;
+  sourceId: string;
+  jobId: string;
+  sourceUrl: string;
+  inventoryMode: string;
+  maxEpisodes: number | null;
+  jobType: string;
+};
+
 type InviteFormState = {
   tenantId: string;
   email: string;
@@ -73,20 +94,46 @@ const defaultInviteForm: InviteFormState = {
   expiresInDays: "14",
 };
 
+type YouTubeSourceFormState = {
+  setupMode: string;
+  tenantId: string;
+  showId: string;
+  showName: string;
+  showSlug: string;
+  sourceUrl: string;
+  inventoryMode: string;
+  maxEpisodes: string;
+};
+
+const defaultYouTubeSourceForm: YouTubeSourceFormState = {
+  setupMode: "New",
+  tenantId: "",
+  showId: "",
+  showName: "",
+  showSlug: "",
+  sourceUrl: "",
+  inventoryMode: "Demo",
+  maxEpisodes: "5",
+};
+
 export default function AdminHome() {
   const { instance, accounts, inProgress } = useMsal();
   const isAuthenticated = useIsAuthenticated();
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [tenants, setTenants] = useState<AdminTenant[]>([]);
+  const [shows, setShows] = useState<AdminShow[]>([]);
   const [showClaims, setShowClaims] = useState<ShowClaim[]>([]);
   const [inviteForm, setInviteForm] = useState<InviteFormState>(defaultInviteForm);
+  const [youtubeSourceForm, setYouTubeSourceForm] = useState<YouTubeSourceFormState>(defaultYouTubeSourceForm);
   const [latestInvitation, setLatestInvitation] = useState<InvitationResponse | null>(null);
+  const [latestYouTubeSource, setLatestYouTubeSource] = useState<YouTubeSourceResponse | null>(null);
   const [error, setError] = useState("");
   const [adminError, setAdminError] = useState("");
   const [loadingUser, setLoadingUser] = useState(false);
   const [loadingAdmin, setLoadingAdmin] = useState(false);
   const [adminLoaded, setAdminLoaded] = useState(false);
   const [submittingInvite, setSubmittingInvite] = useState(false);
+  const [submittingYouTubeSource, setSubmittingYouTubeSource] = useState(false);
   const [reviewingClaimId, setReviewingClaimId] = useState<string | null>(null);
   const [hasMounted, setHasMounted] = useState(false);
 
@@ -147,15 +194,23 @@ export default function AdminHome() {
     setLoadingAdmin(true);
     setAdminError("");
     try {
-      const [tenantResult, claimResult] = await Promise.all([
+      const [tenantResult, showResult, claimResult] = await Promise.all([
         apiRequest<AdminTenant[]>("/api/admin/tenants"),
+        apiRequest<AdminShow[]>("/api/admin/shows"),
         apiRequest<ShowClaim[]>("/api/admin/show-claims/pending"),
       ]);
       setTenants(tenantResult);
+      setShows(showResult);
       setShowClaims(claimResult);
       setInviteForm((previous) => ({
         ...previous,
         tenantId: previous.tenantId || tenantResult[0]?.tenantId || "",
+      }));
+      setYouTubeSourceForm((previous) => ({
+        ...previous,
+        tenantId: previous.tenantId || tenantResult[0]?.tenantId || "",
+        showId: previous.showId || showResult[0]?.showId || "",
+        setupMode: showResult.length ? previous.setupMode : "New",
       }));
     } catch (requestError) {
       if (requestError instanceof InteractionRequiredAuthError && account) {
@@ -192,6 +247,7 @@ export default function AdminHome() {
   async function signOut() {
     setCurrentUser(null);
     setTenants([]);
+    setShows([]);
     setShowClaims([]);
     setAdminLoaded(false);
     await instance.logoutRedirect({ account });
@@ -225,6 +281,64 @@ export default function AdminHome() {
     }
   }
 
+  async function createYouTubeSource(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmittingYouTubeSource(true);
+    setAdminError("");
+    setLatestYouTubeSource(null);
+
+    const maxEpisodes = Number.parseInt(youtubeSourceForm.maxEpisodes, 10);
+    const sourceRequest = {
+      sourceUrl: youtubeSourceForm.sourceUrl,
+      inventoryMode: youtubeSourceForm.inventoryMode,
+      maxEpisodes: Number.isFinite(maxEpisodes) ? maxEpisodes : null,
+    };
+
+    try {
+      const source = youtubeSourceForm.setupMode === "New"
+        ? await apiRequest<YouTubeSourceResponse>(
+            "/api/admin/youtube-demo",
+            {
+              method: "POST",
+              body: JSON.stringify({
+                tenantId: youtubeSourceForm.tenantId,
+                showName: youtubeSourceForm.showName,
+                showSlug: youtubeSourceForm.showSlug.trim() || null,
+                ...sourceRequest,
+              }),
+            },
+          )
+        : await apiRequest<YouTubeSourceResponse>(
+            `/api/admin/shows/${youtubeSourceForm.showId}/youtube-source`,
+            { method: "POST", body: JSON.stringify(sourceRequest) },
+          );
+      const tenant = tenants.find((tenant) => tenant.tenantId === source.tenantId);
+      setShows((previous) => previous.some((show) => show.showId === source.showId)
+        ? previous
+        : [...previous, {
+            showId: source.showId,
+            tenantId: source.tenantId,
+            tenantName: tenant?.tenantName ?? "Tenant",
+            showName: source.showName,
+            slug: youtubeSourceForm.showSlug,
+            status: "Draft",
+          }]);
+      setLatestYouTubeSource(source);
+      setYouTubeSourceForm((previous) => ({
+        ...defaultYouTubeSourceForm,
+        tenantId: previous.tenantId || tenants[0]?.tenantId || "",
+        showId: shows[0]?.showId || source.showId,
+        showName: "",
+        showSlug: "",
+        sourceUrl: "",
+      }));
+    } catch (requestError) {
+      setAdminError(requestError instanceof Error ? requestError.message : "YouTube source could not be created.");
+    } finally {
+      setSubmittingYouTubeSource(false);
+    }
+  }
+
   async function reviewShowClaim(showClaimId: string, action: "approve" | "reject") {
     setReviewingClaimId(showClaimId);
     setAdminError("");
@@ -240,11 +354,6 @@ export default function AdminHome() {
       setReviewingClaimId(null);
     }
   }
-
-  const activeTenant = useMemo(
-    () => tenants.find((tenant) => tenant.tenantId === inviteForm.tenantId),
-    [inviteForm.tenantId, tenants],
-  );
 
   if (!hasMounted || !isAuthenticated) {
     return (
@@ -344,9 +453,9 @@ export default function AdminHome() {
                     <p>Show ownership requests awaiting manual review.</p>
                   </article>
                   <article>
-                    <span>Invite target</span>
-                    <strong>{activeTenant?.tenantName ?? "None"}</strong>
-                    <p>{activeTenant?.slug ?? "Create or select a tenant before inviting users."}</p>
+                    <span>Shows</span>
+                    <strong>{shows.length}</strong>
+                    <p>{shows.length ? "Shows available for source onboarding." : "Create a show before queueing inventory."}</p>
                   </article>
                 </div>
 
@@ -390,12 +499,18 @@ export default function AdminHome() {
                       </label>
                       <div className="form-row">
                         <label>
-                          Show ID
-                          <input
+                          Show
+                          <select
                             value={inviteForm.showId}
                             onChange={(event) => setInviteForm((previous) => ({ ...previous, showId: event.target.value }))}
-                            placeholder="Optional"
-                          />
+                          >
+                            <option value="">No show target</option>
+                            {shows
+                              .filter((show) => !inviteForm.tenantId || show.tenantId === inviteForm.tenantId)
+                              .map((show) => (
+                                <option value={show.showId} key={show.showId}>{show.showName}</option>
+                              ))}
+                          </select>
                         </label>
                         <label>
                           Days
@@ -415,6 +530,111 @@ export default function AdminHome() {
                         <span>One-time invite token</span>
                         <code>{latestInvitation.token}</code>
                         <p>Expires {new Date(latestInvitation.expiresAtUtc).toLocaleString()}</p>
+                      </div>
+                    )}
+                  </article>
+
+                  <article className="tool-panel">
+                    <div className="panel-heading">
+                      <span>Sources</span>
+                      <strong>Queue YouTube demo</strong>
+                    </div>
+                    <form onSubmit={createYouTubeSource}>
+                      <label>
+                        Setup
+                        <select
+                          value={youtubeSourceForm.setupMode}
+                          onChange={(event) => setYouTubeSourceForm((previous) => ({ ...previous, setupMode: event.target.value }))}
+                        >
+                          <option value="New">Create new show</option>
+                          <option value="Existing">Use existing show</option>
+                        </select>
+                      </label>
+                      {youtubeSourceForm.setupMode === "New" ? (
+                        <>
+                          <label>
+                            Tenant
+                            <select
+                              value={youtubeSourceForm.tenantId}
+                              onChange={(event) => setYouTubeSourceForm((previous) => ({ ...previous, tenantId: event.target.value }))}
+                              required
+                            >
+                              {tenants.map((tenant) => (
+                                <option value={tenant.tenantId} key={tenant.tenantId}>{tenant.tenantName}</option>
+                              ))}
+                            </select>
+                          </label>
+                          <label>
+                            Show name
+                            <input
+                              value={youtubeSourceForm.showName}
+                              onChange={(event) => setYouTubeSourceForm((previous) => ({ ...previous, showName: event.target.value }))}
+                              placeholder="The Example Show"
+                              required
+                            />
+                          </label>
+                          <label>
+                            Slug
+                            <input
+                              value={youtubeSourceForm.showSlug}
+                              onChange={(event) => setYouTubeSourceForm((previous) => ({ ...previous, showSlug: event.target.value }))}
+                              placeholder="Generated if blank"
+                            />
+                          </label>
+                        </>
+                      ) : (
+                        <label>
+                          Show
+                          <select
+                            value={youtubeSourceForm.showId}
+                            onChange={(event) => setYouTubeSourceForm((previous) => ({ ...previous, showId: event.target.value }))}
+                            required
+                          >
+                            {shows.map((show) => (
+                              <option value={show.showId} key={show.showId}>{show.showName} · {show.tenantName}</option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
+                      <label>
+                        YouTube channel URL
+                        <input
+                          value={youtubeSourceForm.sourceUrl}
+                          onChange={(event) => setYouTubeSourceForm((previous) => ({ ...previous, sourceUrl: event.target.value }))}
+                          placeholder="https://www.youtube.com/@channel"
+                          type="url"
+                          required
+                        />
+                      </label>
+                      <div className="form-row">
+                        <label>
+                          Mode
+                          <select
+                            value={youtubeSourceForm.inventoryMode}
+                            onChange={(event) => setYouTubeSourceForm((previous) => ({ ...previous, inventoryMode: event.target.value }))}
+                          >
+                            <option value="Demo">Demo</option>
+                            <option value="Full">Full</option>
+                          </select>
+                        </label>
+                        <label>
+                          Episodes
+                          <input
+                            value={youtubeSourceForm.maxEpisodes}
+                            onChange={(event) => setYouTubeSourceForm((previous) => ({ ...previous, maxEpisodes: event.target.value }))}
+                            inputMode="numeric"
+                          />
+                        </label>
+                      </div>
+                      <button type="submit" disabled={submittingYouTubeSource || tenants.length === 0 || (youtubeSourceForm.setupMode === "Existing" && shows.length === 0)}>
+                        {submittingYouTubeSource ? "Queueing..." : "Queue inventory"}
+                      </button>
+                    </form>
+                    {latestYouTubeSource && (
+                      <div className="token-box">
+                        <span>Inventory job queued</span>
+                        <code>{latestYouTubeSource.jobId}</code>
+                        <p>{latestYouTubeSource.inventoryMode} mode, {latestYouTubeSource.maxEpisodes ?? "all"} episodes</p>
                       </div>
                     )}
                   </article>
