@@ -6,6 +6,8 @@ public sealed class MetadataDbContext(DbContextOptions<MetadataDbContext> option
 {
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<AppUser> AppUsers => Set<AppUser>();
+    public DbSet<PlatformRole> PlatformRoles => Set<PlatformRole>();
+    public DbSet<PlatformUserRole> PlatformUserRoles => Set<PlatformUserRole>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<TenantUser> TenantUsers => Set<TenantUser>();
     public DbSet<Show> Shows => Set<Show>();
@@ -15,6 +17,9 @@ public sealed class MetadataDbContext(DbContextOptions<MetadataDbContext> option
     public DbSet<ProcessingJob> ProcessingJobs => Set<ProcessingJob>();
     public DbSet<BillingAccount> BillingAccounts => Set<BillingAccount>();
     public DbSet<UsageCounter> UsageCounters => Set<UsageCounter>();
+    public DbSet<Invitation> Invitations => Set<Invitation>();
+    public DbSet<ShowClaim> ShowClaims => Set<ShowClaim>();
+    public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

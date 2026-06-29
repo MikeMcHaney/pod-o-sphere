@@ -13,6 +13,7 @@ public sealed class Tenant
     public ICollection<ProcessingJob> ProcessingJobs { get; set; } = [];
     public BillingAccount? BillingAccount { get; set; }
     public ICollection<UsageCounter> UsageCounters { get; set; } = [];
+    public ICollection<Invitation> Invitations { get; set; } = [];
 }
 
 public sealed class AppUser
@@ -21,10 +22,37 @@ public sealed class AppUser
     public required string IdentityIssuer { get; set; }
     public required string IdentitySubject { get; set; }
     public required string Email { get; set; }
+    public required string ContactEmail { get; set; }
+    public DateTime? ContactEmailVerifiedAtUtc { get; set; }
+    public string? PreferredUsername { get; set; }
     public string? DisplayName { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? LastLoginAtUtc { get; set; }
     public ICollection<TenantUser> TenantMemberships { get; set; } = [];
+    public ICollection<PlatformUserRole> PlatformRoleMemberships { get; set; } = [];
+    public ICollection<Invitation> CreatedInvitations { get; set; } = [];
+    public ICollection<Invitation> AcceptedInvitations { get; set; } = [];
+    public ICollection<ShowClaim> ReviewedShowClaims { get; set; } = [];
+    public ICollection<AuditEvent> AuditEvents { get; set; } = [];
+}
+
+public sealed class PlatformRole
+{
+    public int PlatformRoleId { get; set; }
+    public required string RoleName { get; set; }
+    public string? Description { get; set; }
+    public ICollection<PlatformUserRole> UserMemberships { get; set; } = [];
+}
+
+public sealed class PlatformUserRole
+{
+    public Guid PlatformUserRoleId { get; set; }
+    public Guid AppUserId { get; set; }
+    public int PlatformRoleId { get; set; }
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAtUtc { get; set; }
+    public required AppUser AppUser { get; set; }
+    public required PlatformRole PlatformRole { get; set; }
 }
 
 public sealed class Role
@@ -64,6 +92,7 @@ public sealed class Show
     public ICollection<DataSource> DataSources { get; set; } = [];
     public ICollection<ProcessingJob> ProcessingJobs { get; set; } = [];
     public ICollection<UsageCounter> UsageCounters { get; set; } = [];
+    public ICollection<ShowClaim> Claims { get; set; } = [];
 }
 
 public sealed class PortalSettings
@@ -166,5 +195,61 @@ public sealed class UsageCounter
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? UpdatedAtUtc { get; set; }
     public required Tenant Tenant { get; set; }
+    public Show? Show { get; set; }
+}
+
+public sealed class Invitation
+{
+    public Guid InvitationId { get; set; }
+    public Guid TenantId { get; set; }
+    public Guid? ShowId { get; set; }
+    public Guid CreatedByAppUserId { get; set; }
+    public Guid? AcceptedByAppUserId { get; set; }
+    public required string Email { get; set; }
+    public required string RoleName { get; set; }
+    public required string InvitationTokenHash { get; set; }
+    public string Status { get; set; } = "Pending";
+    public DateTime ExpiresAtUtc { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
+    public DateTime? AcceptedAtUtc { get; set; }
+    public required Tenant Tenant { get; set; }
+    public Show? Show { get; set; }
+    public required AppUser CreatedByAppUser { get; set; }
+    public AppUser? AcceptedByAppUser { get; set; }
+}
+
+public sealed class ShowClaim
+{
+    public Guid ShowClaimId { get; set; }
+    public Guid? ShowId { get; set; }
+    public Guid RequestingAppUserId { get; set; }
+    public Guid? ReviewedByAppUserId { get; set; }
+    public required string ClaimType { get; set; }
+    public required string SourceUrl { get; set; }
+    public string? VerificationTokenHash { get; set; }
+    public string Status { get; set; } = "Pending";
+    public string? Notes { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
+    public DateTime? ReviewedAtUtc { get; set; }
+    public Show? Show { get; set; }
+    public required AppUser RequestingAppUser { get; set; }
+    public AppUser? ReviewedByAppUser { get; set; }
+}
+
+public sealed class AuditEvent
+{
+    public Guid AuditEventId { get; set; }
+    public Guid? ActorAppUserId { get; set; }
+    public Guid? TenantId { get; set; }
+    public Guid? ShowId { get; set; }
+    public required string EventType { get; set; }
+    public string? TargetType { get; set; }
+    public string? TargetId { get; set; }
+    public string? ActorIdentityIssuer { get; set; }
+    public string? ActorIdentitySubject { get; set; }
+    public string? MetadataJson { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
+    public AppUser? ActorAppUser { get; set; }
+    public Tenant? Tenant { get; set; }
     public Show? Show { get; set; }
 }

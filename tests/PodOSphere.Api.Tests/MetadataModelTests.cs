@@ -10,12 +10,17 @@ public sealed class MetadataModelTests
     private static readonly string[] ExpectedTables =
     [
         "AppUsers",
+        "AuditEvents",
         "BillingAccounts",
         "DataSources",
+        "Invitations",
+        "PlatformRoles",
+        "PlatformUserRoles",
         "PortalDomains",
         "PortalSettings",
         "ProcessingJobs",
         "Roles",
+        "ShowClaims",
         "Shows",
         "Tenants",
         "TenantUsers",
@@ -64,6 +69,32 @@ public sealed class MetadataModelTests
         Assert.Equal(
             [nameof(AppUser.IdentityIssuer), nameof(AppUser.IdentitySubject)],
             identityIndex.Properties.Select(property => property.Name));
+        Assert.Equal(320, appUser.FindProperty(nameof(AppUser.ContactEmail))!.GetMaxLength());
+        Assert.False(appUser.FindProperty(nameof(AppUser.ContactEmail))!.IsNullable);
+        Assert.Equal(320, appUser.FindProperty(nameof(AppUser.PreferredUsername))!.GetMaxLength());
+
+        var platformUserRole = model.FindEntityType(typeof(PlatformUserRole))!;
+        var platformRoleIndex = Assert.Single(
+            platformUserRole.GetIndexes(),
+            index => index.GetDatabaseName() == "UQ_PlatformUserRoles_User_Role");
+        Assert.True(platformRoleIndex.IsUnique);
+
+        var invitation = model.FindEntityType(typeof(Invitation))!;
+        Assert.Contains(
+            invitation.GetIndexes(),
+            index => index.IsUnique && index.Properties.Single().Name == nameof(Invitation.InvitationTokenHash));
+
+        var auditEvent = model.FindEntityType(typeof(AuditEvent))!;
+        Assert.Equal("nvarchar(max)", auditEvent.FindProperty(nameof(AuditEvent.MetadataJson))!.GetColumnType());
+        Assert.Contains(
+            auditEvent.GetIndexes(),
+            index => index.GetDatabaseName() == "IX_AuditEvents_CreatedAt_EventType");
+
+        var showClaim = model.FindEntityType(typeof(ShowClaim))!;
+        Assert.Equal("Pending", showClaim.FindProperty(nameof(ShowClaim.Status))!.GetDefaultValue());
+        Assert.Contains(
+            showClaim.GetIndexes(),
+            index => index.GetDatabaseName() == "IX_ShowClaims_RequestingUser_Status");
 
         var foreignKeys = model.GetEntityTypes().SelectMany(entity => entity.GetForeignKeys());
         Assert.All(foreignKeys, foreignKey => Assert.Equal(DeleteBehavior.NoAction, foreignKey.DeleteBehavior));

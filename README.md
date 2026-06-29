@@ -56,7 +56,7 @@ Copy `apps/admin-portal/.env.example` to `apps/admin-portal/.env.local` and fill
 
 ## Databases
 
-Start MSSQL, then apply the numbered scripts under [`mssql`](./mssql) in order with your preferred SQL client. `001_core_metadata_schema.sql` is the mission-packet baseline; later scripts are forward migrations.
+Start MSSQL, then apply the numbered scripts under [`mssql`](./mssql) in order with your preferred SQL client. `001_core_metadata_schema.sql` is the mission-packet baseline; later scripts are forward migrations. `003_platform_roles_invitations_show_claims.sql` moves SuperAdmin into platform roles and adds the invite/show-claim onboarding tables. `004_app_user_contact_profile.sql` separates contact email from token username hints. `005_audit_events.sql` adds the audit trail foundation.
 
 ```bash
 docker compose up -d mssql
@@ -69,7 +69,7 @@ supabase start
 supabase db reset
 ```
 
-The `001` MSSQL schema and initial Supabase migration are mission-packet baselines copied unchanged. Later numbered scripts are Pod-o-Sphere forward migrations; application mappings must reflect the full ordered result.
+The `001` MSSQL schema and initial Supabase migration are mission-packet baselines copied unchanged. Later numbered scripts are Pod-o-Sphere forward migrations; application mappings must reflect the full ordered result. Platform roles are global operator permissions; tenant roles remain scoped to tenant membership. Audit events are append-only records for operator, invite, claim, and future ownership changes.
 
 ## Checks
 

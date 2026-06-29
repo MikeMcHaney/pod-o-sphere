@@ -28,6 +28,8 @@ public sealed class AppUserConfiguration : IEntityTypeConfiguration<AppUser>
         builder.Property(x => x.IdentityIssuer).HasMaxLength(500).IsRequired();
         builder.Property(x => x.IdentitySubject).HasMaxLength(200).IsRequired();
         builder.Property(x => x.Email).HasMaxLength(320).IsRequired();
+        builder.Property(x => x.ContactEmail).HasMaxLength(320).IsRequired();
+        builder.Property(x => x.PreferredUsername).HasMaxLength(320);
         builder.Property(x => x.DisplayName).HasMaxLength(200);
         builder.Property(x => x.CreatedAtUtc).HasDefaultValueSql("sysutcdatetime()");
         builder.HasIndex(x => new { x.IdentityIssuer, x.IdentitySubject })
@@ -46,6 +48,36 @@ public sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
         builder.Property(x => x.RoleName).HasMaxLength(100).IsRequired();
         builder.Property(x => x.Description).HasMaxLength(500);
         builder.HasIndex(x => x.RoleName).IsUnique();
+    }
+}
+
+public sealed class PlatformRoleConfiguration : IEntityTypeConfiguration<PlatformRole>
+{
+    public void Configure(EntityTypeBuilder<PlatformRole> builder)
+    {
+        builder.ToTable("PlatformRoles", "dbo");
+        builder.HasKey(x => x.PlatformRoleId);
+        builder.Property(x => x.PlatformRoleId).UseIdentityColumn();
+        builder.Property(x => x.RoleName).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.Description).HasMaxLength(500);
+        builder.HasIndex(x => x.RoleName).IsUnique();
+    }
+}
+
+public sealed class PlatformUserRoleConfiguration : IEntityTypeConfiguration<PlatformUserRole>
+{
+    public void Configure(EntityTypeBuilder<PlatformUserRole> builder)
+    {
+        builder.ToTable("PlatformUserRoles", "dbo");
+        builder.HasKey(x => x.PlatformUserRoleId);
+        builder.Property(x => x.PlatformUserRoleId).HasDefaultValueSql("newid()");
+        builder.Property(x => x.IsActive).HasDefaultValue(true);
+        builder.Property(x => x.CreatedAtUtc).HasDefaultValueSql("sysutcdatetime()");
+        builder.HasIndex(x => new { x.AppUserId, x.PlatformRoleId })
+            .IsUnique()
+            .HasDatabaseName("UQ_PlatformUserRoles_User_Role");
+        builder.HasOne(x => x.AppUser).WithMany(x => x.PlatformRoleMemberships).HasForeignKey(x => x.AppUserId).OnDelete(DeleteBehavior.NoAction);
+        builder.HasOne(x => x.PlatformRole).WithMany(x => x.UserMemberships).HasForeignKey(x => x.PlatformRoleId).OnDelete(DeleteBehavior.NoAction);
     }
 }
 
@@ -211,5 +243,70 @@ public sealed class UsageCounterConfiguration : IEntityTypeConfiguration<UsageCo
         builder.HasIndex(x => new { x.TenantId, x.ShowId, x.UsageMonth }).IsUnique().HasDatabaseName("UQ_UsageCounters_Tenant_Show_Month");
         builder.HasOne(x => x.Tenant).WithMany(x => x.UsageCounters).HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.NoAction);
         builder.HasOne(x => x.Show).WithMany(x => x.UsageCounters).HasForeignKey(x => x.ShowId).OnDelete(DeleteBehavior.NoAction);
+    }
+}
+
+public sealed class InvitationConfiguration : IEntityTypeConfiguration<Invitation>
+{
+    public void Configure(EntityTypeBuilder<Invitation> builder)
+    {
+        builder.ToTable("Invitations", "dbo");
+        builder.HasKey(x => x.InvitationId);
+        builder.Property(x => x.InvitationId).HasDefaultValueSql("newid()");
+        builder.Property(x => x.Email).HasMaxLength(320).IsRequired();
+        builder.Property(x => x.RoleName).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.InvitationTokenHash).HasMaxLength(200).IsRequired();
+        builder.Property(x => x.Status).HasMaxLength(50).HasDefaultValue("Pending").IsRequired();
+        builder.Property(x => x.CreatedAtUtc).HasDefaultValueSql("sysutcdatetime()");
+        builder.HasIndex(x => x.InvitationTokenHash).IsUnique();
+        builder.HasIndex(x => new { x.TenantId, x.Email, x.Status }).HasDatabaseName("IX_Invitations_Tenant_Email_Status");
+        builder.HasOne(x => x.Tenant).WithMany(x => x.Invitations).HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.NoAction);
+        builder.HasOne(x => x.Show).WithMany().HasForeignKey(x => x.ShowId).OnDelete(DeleteBehavior.NoAction);
+        builder.HasOne(x => x.CreatedByAppUser).WithMany(x => x.CreatedInvitations).HasForeignKey(x => x.CreatedByAppUserId).OnDelete(DeleteBehavior.NoAction);
+        builder.HasOne(x => x.AcceptedByAppUser).WithMany(x => x.AcceptedInvitations).HasForeignKey(x => x.AcceptedByAppUserId).OnDelete(DeleteBehavior.NoAction);
+    }
+}
+
+public sealed class ShowClaimConfiguration : IEntityTypeConfiguration<ShowClaim>
+{
+    public void Configure(EntityTypeBuilder<ShowClaim> builder)
+    {
+        builder.ToTable("ShowClaims", "dbo");
+        builder.HasKey(x => x.ShowClaimId);
+        builder.Property(x => x.ShowClaimId).HasDefaultValueSql("newid()");
+        builder.Property(x => x.ClaimType).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.SourceUrl).HasMaxLength(1000).IsRequired();
+        builder.Property(x => x.VerificationTokenHash).HasMaxLength(200);
+        builder.Property(x => x.Status).HasMaxLength(50).HasDefaultValue("Pending").IsRequired();
+        builder.Property(x => x.Notes).HasColumnType("nvarchar(max)");
+        builder.Property(x => x.CreatedAtUtc).HasDefaultValueSql("sysutcdatetime()");
+        builder.HasIndex(x => new { x.RequestingAppUserId, x.Status }).HasDatabaseName("IX_ShowClaims_RequestingUser_Status");
+        builder.HasIndex(x => new { x.ShowId, x.Status }).HasDatabaseName("IX_ShowClaims_Show_Status");
+        builder.HasOne(x => x.Show).WithMany(x => x.Claims).HasForeignKey(x => x.ShowId).OnDelete(DeleteBehavior.NoAction);
+        builder.HasOne(x => x.RequestingAppUser).WithMany().HasForeignKey(x => x.RequestingAppUserId).OnDelete(DeleteBehavior.NoAction);
+        builder.HasOne(x => x.ReviewedByAppUser).WithMany(x => x.ReviewedShowClaims).HasForeignKey(x => x.ReviewedByAppUserId).OnDelete(DeleteBehavior.NoAction);
+    }
+}
+
+public sealed class AuditEventConfiguration : IEntityTypeConfiguration<AuditEvent>
+{
+    public void Configure(EntityTypeBuilder<AuditEvent> builder)
+    {
+        builder.ToTable("AuditEvents", "dbo");
+        builder.HasKey(x => x.AuditEventId);
+        builder.Property(x => x.AuditEventId).HasDefaultValueSql("newid()");
+        builder.Property(x => x.EventType).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.TargetType).HasMaxLength(100);
+        builder.Property(x => x.TargetId).HasMaxLength(200);
+        builder.Property(x => x.ActorIdentityIssuer).HasMaxLength(500);
+        builder.Property(x => x.ActorIdentitySubject).HasMaxLength(200);
+        builder.Property(x => x.MetadataJson).HasColumnType("nvarchar(max)");
+        builder.Property(x => x.CreatedAtUtc).HasDefaultValueSql("sysutcdatetime()");
+        builder.HasIndex(x => new { x.CreatedAtUtc, x.EventType }).HasDatabaseName("IX_AuditEvents_CreatedAt_EventType");
+        builder.HasIndex(x => new { x.ActorAppUserId, x.CreatedAtUtc }).HasDatabaseName("IX_AuditEvents_Actor_CreatedAt");
+        builder.HasIndex(x => new { x.TenantId, x.CreatedAtUtc }).HasDatabaseName("IX_AuditEvents_Tenant_CreatedAt");
+        builder.HasOne(x => x.ActorAppUser).WithMany(x => x.AuditEvents).HasForeignKey(x => x.ActorAppUserId).OnDelete(DeleteBehavior.NoAction);
+        builder.HasOne(x => x.Tenant).WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.NoAction);
+        builder.HasOne(x => x.Show).WithMany().HasForeignKey(x => x.ShowId).OnDelete(DeleteBehavior.NoAction);
     }
 }
